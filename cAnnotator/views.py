@@ -40,7 +40,7 @@ class CommentAnnotator(QMainWindow):
         self.init_conf()
 
         self.step()
-        
+
 ####        self.activate()
 
     def showThumnail(self, filename):
@@ -83,14 +83,13 @@ class CommentAnnotator(QMainWindow):
                                      )
         if QMessageBox.Save == pushed:
             self.saveone()
-            
+
         self.close()
 
     def saveone(self):
         if not self.data:
             return
         while True:
-            print("poo", QFileDialog.getSaveFileName)
             savename, fmt = QFileDialog.getSaveFileName(
                 None,
                 "Save...",
@@ -100,13 +99,15 @@ class CommentAnnotator(QMainWindow):
             if not fmt:
                 break
             if not savename:
+                print(savename, fmt)
                 continue
 
             with open(savename, "w") as f:
                 for filename, label in self.data:
                     print("{},{}".format(filename, label),
                           file=f
-                          )                      
+                          )
+            break
 
 
 
@@ -141,7 +142,7 @@ class CommentAnnotator(QMainWindow):
 ##        self.setSizePolicy(QSizePolicy.Maximum,
 ##                           QSizePolicy.Maximum
 ##                           )
-##        
+##
         ## const
         base = QWidget(self)
 ##        base.setSizePolicy(QSizePolicy.Maximum,
@@ -169,7 +170,7 @@ class CommentAnnotator(QMainWindow):
 ##            dir(btn)
         label_buttons.clicked.connect(self.process)
 ##        print(label_buttons.buttons())
-        
+
         cancelbutton = QPushButton("Cancel",parent=base)
 ####        startbutton = QPushButton("start", parent=base)
 ####        startbutton.setEnabled(False)
@@ -181,12 +182,12 @@ class CommentAnnotator(QMainWindow):
 
         ## arrange
         self.setCentralWidget(base)
-        
+
         baseLO = QVBoxLayout(base)
         baseLO.setSizeConstraint(QLayout.SetMinimumSize)
 
         baseLO.addWidget(scrollarea)
-        
+
 
         buttomLO = QHBoxLayout()
         buttomLO.addWidget(label_buttons)
