@@ -142,7 +142,8 @@ class ImgAnnotator(QMainWindow):
 
         me = cls(p, mainapp=app)
         me.show()
-        app.exec_()
+        exit_code = app.exec_()
+        return exit_code
 
     def initUI(self):
         self.resize(400,300)

@@ -1,4 +1,7 @@
 from . import CommentAnnotator
 
-if __name__ == "__main__":
+def main():
     CommentAnnotator.go()
+
+if __name__ == "__main__":
+    main()
