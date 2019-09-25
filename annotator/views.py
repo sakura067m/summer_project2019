@@ -2,15 +2,22 @@ import sys
 from pathlib import Path
 from itertools import chain
 from PyQt5.QtWidgets import (QApplication, QMainWindow,
-                             QFileDialog,
+                             QFileDialog, QMessageBox,
                              QWidget, QPushButton, QCheckBox,
+                             QDialogButtonBox,
                              QLabel, QLineEdit, QProgressBar,
                              QScrollArea,
                              QVBoxLayout,QHBoxLayout,QLayout,
-                             QSizePolicy
+                             QSizePolicy,
+                             QShortcut,
                              )
 from PyQt5.QtCore import pyqtSignal, QThread, QObject, Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QKeySequence
+
+import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from PIL import Image
 
 
 class ImgAnnotator(QMainWindow):
@@ -19,30 +26,37 @@ class ImgAnnotator(QMainWindow):
 
     def __init__(self, src, mainapp, parent=None):
         super().__init__(parent)
+        self.app = mainapp
         p = Path(src)
         self.root = p
+        with open(p/"labels.txt", "r") as f:
+            buf = f.read()
+        self.labels = buf.split()
+        print(self.labels)
         order = chain(p.glob("*.jpg"), p.glob("*.png"), p.glob("*.bmp"))
         self._order = order
+        self.data = []
+        self.saved = True
 
         self.initUI()
+        self.init_conf()
 
         self.step()
         
-        self.activate()
+####        self.activate()
 
         print(self.size())
 
     def showThumnail(self, filename):
-        label = self.thumnail
-        pxmap = QPixmap(filename)
-        label.setPixmap(pxmap)
-##        label.setPixmap(
-##            pxmap.scaled(
-##                self.scrollarea.viewportSizeHint(),
-##                Qt.KeepAspectRatio,
-##                Qt.SmoothTransformation
-##                )
-##            )
+        image = np.asarray(Image.open(filename))
+        self.image_data = image
+        if hasattr(self, "ax_image"):
+##            print("foo")
+            self.ax_image.set_data(image)
+        else:
+            self.ax_image = self.ax.imshow(image)
+        self.canvas.draw_idle()
+##        self.app.processEvents()
 
     def step(self):
         try:
@@ -51,8 +65,58 @@ class ImgAnnotator(QMainWindow):
             self.end.emit()
             return
         name = str(cue)
+##        print(name)
         self.showThumnail(name)
         self.filename = name
+
+    def process(self, btn):
+        self.saved = False
+##        print("******")
+##        print(btn)
+        filename = self.filename
+        label = btn.text()
+        print("filename:", self.filename)
+        print("pushed:", label)
+        self.data.append((filename,label))
+        self.step()
+
+    def exit(self):
+        if self.saved:
+            print("closing")
+            self.close()
+
+        pushed = QMessageBox.warning(None,
+                                     "About to quit...",
+                                     "保存しますか？",
+                                     QMessageBox.Save | QMessageBox.Close
+                                     )
+        if QMessageBox.Save == pushed:
+            self.saveone()
+            
+        self.close()
+
+    def saveone(self):
+        if not self.data:
+            return
+        while True:
+            print("poo", QFileDialog.getSaveFileName)
+            savename, fmt = QFileDialog.getSaveFileName(
+                None,
+                "Save...",
+                str(self.root),
+                "カンマ区切り (*.csv);;All files (*.*)"
+                )
+            if not fmt:
+                break
+            if not savename:
+                continue
+
+            with open(savename, "w") as f:
+                for filename, label in self.data:
+                    print("{},{}".format(filename, label),
+                          file=f
+                          )                      
+
 
 
     @classmethod
@@ -62,7 +126,7 @@ class ImgAnnotator(QMainWindow):
         for k in range(5):
             src = QFileDialog.getExistingDirectory(None,
                                                    "Open Directory",
-                                                   "../Fuji",
+                                                   "./",
                                                    QFileDialog.ShowDirsOnly
                                                    )
             if not src:
@@ -83,41 +147,42 @@ class ImgAnnotator(QMainWindow):
         self.resize(400,300)
 ##        self.setSizePolicy(QSizePolicy.Fixed,
 ##                           QSizePolicy.Fixed
-        self.setSizePolicy(QSizePolicy.Maximum,
-                           QSizePolicy.Maximum
-                           )
-        
+##        self.setSizePolicy(QSizePolicy.Maximum,
+##                           QSizePolicy.Maximum
+##                           )
+##        
         ## const
         base = QWidget(self)
-        base.setSizePolicy(QSizePolicy.Maximum,
-                           QSizePolicy.Maximum
-                           )
+##        base.setSizePolicy(QSizePolicy.Maximum,
+##                           QSizePolicy.Maximum
+##                           )
 
-        scrollarea = QScrollArea(base)
-        self.scrollarea = scrollarea
-        scrollarea.setSizePolicy(QSizePolicy.MinimumExpanding,
-                               QSizePolicy.MinimumExpanding
-                               )
-        scrollarea.setAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
+        fig = plt.Figure()
+        canvas = FigureCanvas(fig)
+        canvas.setParent(base)
+        ax = fig.add_subplot(1,1,1)
+        self.figure = fig
+        self.canvas = canvas
+        self.ax = ax
+        ax.axis("off")
 
-        thumnail = QLabel(scrollarea)
-##        thumnail.setScaledContents(True)
-##        thumnail.resize(300,400)
-        self.thumnail = thumnail
-        thumnail.setSizePolicy(QSizePolicy.Maximum,
-                               QSizePolicy.Maximum
-                               )
-        print(thumnail.size())
-        scrollarea.setWidget(thumnail)
-        scrollarea.setWidgetResizable(True)
+        label_buttons = QDialogButtonBox(parent=self)
+        for i,s in enumerate(self.labels):
+            btn = label_buttons.addButton(s, QDialogButtonBox.ActionRole)
+            btn.setShortcut(QKeySequence(str(i+1)))
+##            print(s)
+##            dir(btn)
+        label_buttons.clicked.connect(self.process)
+##        print(label_buttons.buttons())
         
         cancelbutton = QPushButton("Cancel",parent=base)
-        startbutton = QPushButton("start", parent=base)
-        startbutton.setEnabled(False)
+####        startbutton = QPushButton("start", parent=base)
+####        startbutton.setEnabled(False)
         self.cancelbutton = cancelbutton
-        self.canceled = cancelbutton.clicked
-        startbutton.clicked.connect(self.step)
-        self.activate = lambda: startbutton.setEnabled(True)
+####        startbutton.clicked.connect(self.step)
+####        self.activate = lambda: startbutton.setEnabled(True)
+        cancelbutton.clicked.connect(self.exit)
+        self.end.connect(lambda: print("end"))
 
         ## arrange
         self.setCentralWidget(base)
@@ -125,14 +190,19 @@ class ImgAnnotator(QMainWindow):
         baseLO = QVBoxLayout(base)
         baseLO.setSizeConstraint(QLayout.SetMinimumSize)
 
-        baseLO.addWidget(scrollarea)
+        baseLO.addWidget(canvas)
         
 
         buttomLO = QHBoxLayout()
+        buttomLO.addWidget(label_buttons)
         buttomLO.addStretch()
-        buttomLO.addWidget(startbutton)
+####        buttomLO.addWidget(startbutton)
         buttomLO.addWidget(cancelbutton)
         baseLO.addLayout(buttomLO)
+
+    def init_conf(self):
+        scCtrlS = QShortcut(QKeySequence("Ctrl+S"),self)
+        scCtrlS.activated.connect(self.saveone)
 
 if __name__ == "__main__":
     ImgAnnotator.go()
