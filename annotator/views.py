@@ -19,6 +19,7 @@ from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PIL import Image
 
+wd = Path(__file__).parent
 
 class ImgAnnotator(QMainWindow):
 
@@ -29,7 +30,7 @@ class ImgAnnotator(QMainWindow):
         self.app = mainapp
         p = Path(src)
         self.root = p
-        with open(p/"labels.txt", "r") as f:
+        with open(wd/"labels.txt", "r") as f:
             buf = f.read()
         self.labels = buf.split()
         print(self.labels)
@@ -133,8 +134,8 @@ class ImgAnnotator(QMainWindow):
                 print("Canceled")
                 return 1
             p = Path(src)
-            if (p/"labels.txt").exists(): break
-            else: print("labels.txt does not found.")
+            break
+
         else:
             print("Check your directory and try again.")
             return 1
@@ -157,7 +158,7 @@ class ImgAnnotator(QMainWindow):
 ##                           QSizePolicy.Maximum
 ##                           )
 
-        fig = plt.Figure()
+        fig = plt.Figure(dpi=200)
         canvas = FigureCanvas(fig)
         canvas.setParent(base)
         ax = fig.add_subplot(1,1,1)
@@ -175,7 +176,7 @@ class ImgAnnotator(QMainWindow):
         label_buttons.clicked.connect(self.process)
 ##        print(label_buttons.buttons())
         
-        cancelbutton = QPushButton("Cancel",parent=base)
+        cancelbutton = QPushButton("Cancel", parent=base)
 ####        startbutton = QPushButton("start", parent=base)
 ####        startbutton.setEnabled(False)
         self.cancelbutton = cancelbutton

@@ -1,3 +1,5 @@
 .DS_Store
-Fuji*
-test*
+__pycache__
+testcase
+samplefile
+etc
