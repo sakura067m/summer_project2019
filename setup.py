@@ -8,7 +8,7 @@ requirements = [
     "selenium==3.141.0",
     "requests==2.22.0",
     "lxml==4.4.1",
-    "urllib3==1.25.3"
+    "urllib3==1.25.8"
 ]
 
 
