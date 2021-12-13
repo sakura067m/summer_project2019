@@ -7,7 +7,7 @@ requirements = [
     "Pillow>=6.1.0",
     "selenium==3.141.0",
     "requests==2.22.0",
-    "lxml==4.4.1",
+    "lxml==4.6.5",
     "urllib3==1.25.3"
 ]
 
